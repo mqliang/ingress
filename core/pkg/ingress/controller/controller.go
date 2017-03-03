@@ -172,6 +172,10 @@ func newIngressController(config *Configuration) *GenericController {
 				glog.Infof("ignoring add for ingress %v based on annotation %v", addIng.Name, ingressClassKey)
 				return
 			}
+			if !isAssignedToSelf(addIng, config.Client) {
+				glog.Infof("Ignoring add for ingress %v based on annotation %v", addIng.Name, ingressLoadbalancerAnno)
+				return
+			}
 			ic.recorder.Eventf(addIng, api.EventTypeNormal, "CREATE", fmt.Sprintf("Ingress %s/%s", addIng.Namespace, addIng.Name))
 			ic.syncQueue.Enqueue(obj)
 		},
@@ -181,6 +185,10 @@ func newIngressController(config *Configuration) *GenericController {
 				glog.Infof("ignoring delete for ingress %v based on annotation %v", delIng.Name, ingressClassKey)
 				return
 			}
+			if !isAssignedToSelf(delIng, config.Client) {
+				glog.Infof(delIng.Name, ingressLoadbalancerAnno)
+				return
+			}
 			ic.recorder.Eventf(delIng, api.EventTypeNormal, "DELETE", fmt.Sprintf("Ingress %s/%s", delIng.Namespace, delIng.Name))
 			ic.syncQueue.Enqueue(obj)
 		},
@@ -188,6 +196,10 @@ func newIngressController(config *Configuration) *GenericController {
 			oldIng := old.(*extensions.Ingress)
 			curIng := cur.(*extensions.Ingress)
 			if !IsValidClass(curIng, config) && !IsValidClass(oldIng, config) {
+				return
+			}
+			if !isAssignedToSelf(curIng, config.Client) {
+				glog.Infof("Ignoring add for ingress %v based on annotation %v", curIng.Name, ingressLoadbalancerAnno)
 				return
 			}
 

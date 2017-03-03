@@ -27,7 +27,11 @@ import (
 	"k8s.io/ingress/core/pkg/ingress"
 	"k8s.io/ingress/core/pkg/ingress/annotations/parser"
 	"k8s.io/ingress/core/pkg/ingress/errors"
+	"k8s.io/ingress/core/pkg/k8s"
+	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 )
+
+const ingressLoadbalancerAnno = "ingress.alpha.k8s.io/loadbalancer-name"
 
 // DeniedKeyName name of the key that contains the reason to deny a location
 const DeniedKeyName = "Denied"
@@ -108,6 +112,19 @@ func IsValidClass(ing *extensions.Ingress, config *Configuration) bool {
 	}
 
 	return cc == currentIngClass
+}
+
+func isAssignedToSelf(ing *extensions.Ingress, client *clientset.Clientset) bool {
+	if ing.Annotations == nil {
+		return false
+	}
+
+	podInfo, err := k8s.GetPodDetails(client)
+	if err != nil {
+		glog.Fatalf("unexpected error obtaining pod information: %v", err)
+	}
+
+	return strings.HasPrefix(ing.Annotations[ingressLoadbalancerAnno], podInfo.Name)
 }
 
 func mergeLocationAnnotations(loc *ingress.Location, anns map[string]interface{}) {
